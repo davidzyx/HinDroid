@@ -6,7 +6,7 @@ The task of interest here is to effectively classify Android applications as ben
 
 ## The Data
 
-The paper uses a static analysis method to identify malware. It only analyze the code instead of running a more dangerous dynamic analysis method to monitor the app's behavior. Therefore we need to extract the code from an Android app. Android apps are compiled and distributed as packages in the .apk (Android Application Package) format. This package contains unreadable dex code files, which can be decompiled into Smali code to be read and processed using [ApkTool](https://ibotpeaches.github.io/Apktool/). We then parse the smali codes to get useful information for classifying an app is malicious or not.
+The paper uses a static analysis method to identify malware. It only analyze the code instead of running a more dangerous dynamic analysis method to monitor the app's behavior. Essentially, we need to extract code from an Android app. Android apps are compiled and distributed as packages in the .apk (Android Application Package) format. This package contains unreadable dex code files, which can be decompiled into Smali code to be read and processed using [ApkTool](https://ibotpeaches.github.io/Apktool/). We then parse the smali codes to get useful information for classifying an app is malicious or not.
 
 The most important feature this paper is focused on is API calls in smali codes. API stands for Application Programming Interfaces, they are an abstract layer of function calls that can be imbedded in code to accomplish anything the developer wants. While there are low-level APIs like string contatenation or parsing a string to an integer, the APIs that trigger our senses should be those that are asking system permissions or sending HTTP requests to a suspecting IP address. Shown below is an excerpt of .smali file that is the decomposition of appending two strings using StringBuilder in Java:
 
@@ -25,21 +25,21 @@ A call can be decomposed into 6 components:
 5. Type of arguments in parenthesis
 6. Return type
 
-
+In this section, we are going to explain how we are going to get the data that leads to the feature extraction in smali code.
 
 ### Acquiring Data
 
 #### Overview
 
-The data consists of two parts: benign apps and malicious apps.
+The data we need consist of two parts: benign apps and malicious apps.
 
-We get our benign apps from an online APK distribution platform [APKPure](https://apkpure.com), where APK files can be downloaded directly. This tool is preferable because of the relative ease of downloading APK files and the scraping-friendly interface -- getting those from the Google Play Store is rather a burden. The malicious apps are obtained through a private source, since databases that collect these data are sensitive and could be used in malicious ways, which is the opposite of what we want. By acquiring apps with both positive and negative labels in our classification task, we can apply machine learning algorithms for binary classification to separate their different intent.
+We get our benign apps from an online APK distribution platform [APKPure](https://apkpure.com), where APK files can be downloaded directly. This tool is preferable because of the relative ease of downloading APK files and the scraping-friendly interface -- getting those from the Google Play Store is rather a burden. The malicious apps are obtained through a private source, since databases that collect these data are sensitive and could be used in malicious ways, which is the opposite of what we want. By acquiring apps with both positive and negative labels in our classification task, we can apply machine learning algorithms for binary classification to separate their varying intent.
 
 #### Connection to the Problem
 
-Although the sitemap that describes the structure of APKPure's website was last updated on 09/16/2019, the APK files linked in the website is updated to the latest version, so the benign part of the data accurately represent what people are using on their phones, thus they contain the latest features from that group. On the apps that are malicious, the data we get are from historical databases. They are still relevant to the question since malicious apps are often of certain types or their variants, and these groups often exhibit similar behavior, which can be represented in the same API calls in their codebase. This information can be extracted from the decompiled executable as well as the relationship between them will be used as features in the model later on.
+Although the sitemap that describes the structure of APKPure's website was last updated on 09/16/2019, the APK files linked in the website is updated to the latest version, so the benign part of the data accurately represent what people are using on their phones, thus they contain the latest features from that group. On the apps that are malicious, they are from historical databases. They are still relevant to the question since malicious apps are often of certain types or their variants, and these groups often exhibit similar behavior, which can be represented in the same API calls in their codebase. This can be extracted from the decompiled executable, and combined with the relationship between them, they will be used as features in the model.
 
-Since malicious apps are provided in very limited quantities, they are dwarfed by the number of benign applications hosted on APKPure. We can thus adjust the makeup of the benign apps data by our preference to better represent the population of Android apps and also benefit the performance of various machine learning algorithms on binary classification.
+Since malicious apps are provided in very limited quantities, they are dwarfed by the number of benign applications hosted on APKPure. We can thus adjust the makeup of the benign apps data by our preference to better represent the population of Android apps and also boost the performance of various machine learning algorithms on binary classification.
 
 #### Shortcomings
 
@@ -51,7 +51,7 @@ This paper also only focuses on the relationships between API calls themselves a
 
 #### Past Efforts
 
-The standard in identifying security threats in Android apps on the fly have been mainly using the signature of the application in question to check against a database of identified malicious apps. This method requires the data obtained in the first step of our data acquirement process because the extraction tool cannot run on the Android kernel.
+The standard in identifying security threats on the fly has been mainly using the signature of the application in question to check against a database of identified malicious apps. This method requires the data obtained in the first step of our data acquirement process because the extraction tool cannot run on the Android kernel.
 
 Other research studies on identifying malware have been using either dynamic analysis, or using only the API calls and system access requests. These efforts are either computationally heavy since running the application requires an active virtual runtime for analysis, and it takes significant more time to predict.
 
@@ -61,7 +61,7 @@ In this paper, relationships between API calls are extracted using a heterogeneo
 
 #### Data Pipeline
 
-In the first step of the data pipeline, we primarily use [APKPure](https://apkpure.com) to download benign Android applications. The site's robots.txt file contains a sitemap.xml file which can be parsed to get information on all the apps available on the website. The sitemap.xml lists all the additional xml files that each consists of roughly 1000 apps in the same category. We can aggregate only the information that we need and store it in a SQLite database. We do this by dynamically requesting the url instead of saving all subfiles into a file system. There are ~7700 xml files stored in the master file, and saving them will require ~2.35GB of disk space. The dynamically processed procedure saves file IO overhead that would slow down data extraction speed and further decrease read and query efficiency down the pipeline.
+In the first step of the data pipeline, we use [APKPure](https://apkpure.com) to download benign Android applications. The site's robots.txt file contains a sitemap.xml file which can be parsed to get information on all the apps available on the website. The sitemap.xml lists all the additional xml files that each consists of roughly 1000 apps in the same category. We can aggregate only the information that we need and store it in a Apache Arrow [Parquet](https://parquet.apache.org/) file. We do this by dynamically requesting the url instead of saving all subfiles into a file system. There are ~7700 xml files stored in the master file, and saving them will require ~2.35GB of disk space. The dynamically processed procedure saves file IO overhead that would slow down data extraction speed and further decrease read and query efficiency down the pipeline.
 
 The columns that are stored in the table includes:
 
@@ -74,13 +74,17 @@ The columns that are stored in the table includes:
 + `image_loc`: The Cloudare CDN link to the app's logo
 + `sitemap_url`: The URL in sitemap.xml that contains this entry
 + `name_slug`: Name of the application in URL encoding format
-+ `dev`: The package name for the apk file
++ `package`: The package name for the apk file
 
-Among these columns, changefreq and priority have only one unique value, where changefreq is all weekly and priority is all 0.6, so both columns are dropped. For name_slug and dev, they are extracted from the url column, where individual apps' url are constructed this way: `https://apkpure.com/{name_slug}/{dev}`. The dev column is called dev because a lot of developers include their studio name into their package names.
+Among these columns, changefreq and priority have only one unique value, where changefreq is all weekly and priority is all 0.6, so both columns are dropped. For `name_slug` and `package`, they are extracted from the url column, where individual apps' url are constructed this way: `https://apkpure.com/{name_slug}/{package}`. The `package` name can also be found in the `AndroidManifest.xml` manifest file. To save disk space and read speed later on, columns `url`, `image_loc`, `sitemap_url` are dropped because they are either redundant or irrelevant.
 
-Given the structured database, we can apply custom sampling method to cater to different needs, such as giving equal representation on all categories or just purely random sample without replacement. Also, the database file can be easily distributed because of SQLite's single compact file design.
+Given the dataframe, we can apply custom sampling method to cater to different needs, such as giving equal representation on all categories or just purely random sample without replacement. Also, the dataframe file can be easily distributed because it has only one compact file.
 
-The second step of the data pipeline involves extracting the smali assembly code out of APK files. The centerpiece of this pipeline is the popular [ApkTool](https://ibotpeaches.github.io/Apktool/) for decompiling. Given a configuration file containing the app url on APKPure, the python script will download the APK from the web and store it in a custom structured directory, and smali codes will be extracted in the same directory where the APK is downloaded. This config file being fed here should be generated by an additional sampling script that reads the database table from the first pipeline. The data_params.json should be structured as follow:
+The second step of the data pipeline lets the user choose a sampling method to generate a list of urls that feeds into the third step. For now, we provide an naive way, simple random sample without replacement, for a baseline data.
+
+The script will output a list of urls that link to the application on APKPure.
+
+The third step of the data pipeline involves extracting the smali assembly code out of APK files. The centerpiece of this pipeline is the popular [ApkTool](https://ibotpeaches.github.io/Apktool/) for decompiling. Given a configuration file containing the app url on APKPure, the python script will download the APK from the web and store it in a custom structured directory, and smali codes will be extracted in the same directory where the APK is downloaded. This config file being fed here should be generated by an additional sampling script that reads the dataframe table from the first pipeline. The data_params.json should be structured as follow:
 
 ```json
 {
@@ -110,20 +114,17 @@ data/
 |   |   |   |-- smali*/
 ```
 
-After the extraction, an optional step can be applied to the smali folders in the extracted content. The intent is to compress the complicated file structure that smali folders have. There are at least 100 smali files in every project and they are just some of the basic or low level APIs that every app must include. Because of that reason, we could create a `tar` archive for every app's smali folders to reduce the file size down to only 1, similar to the first step of the data pipeline. However, since the smali folders only get read by the next step only once for every analysis, it isn't strictly necessary for the tarball. Although we can save some disk space while gziping the tar archive.
+After the extraction, the script will delete all the irrelevant files, while only storing `AndroidManifest.xml` and the subdirectories that start with "smali". An optional step can be applied to the smali folders in the extracted content. The intent is to compress the complicated file structure that smali folders have. There are at least 100 smali files in every project and they are just some of the basic or low level APIs that every app must include. Because of that reason, we could create a `tar` archive for every app's smali folders to reduce the file size down to only 1, similar to the first step of the data pipeline. However, since the smali folders only get read by the next step only once for every analysis, it isn't strictly necessary for the tarball. Although we can save some disk space while gziping the tar archive.
 
-The third step is primarily focused on the ease of extracting features in the EDA part of this project. Reading many structured files can be computationally inefficient when a prior preprocessing step can be applied to extract all the details in general.
+<!-- The third step is primarily focused on the ease of extracting features in the EDA part of this project. Reading many a complex directory tree can be computationally inefficient when a prior preprocessing step can be applied to extract all the details in general. For the preparation of this specific paper, we can extract only the sufficient lines and stack them in a giant text file. The lines we are going to extract should contain only API method opens and closes. The information is sufficient because if the lines are stored in the same order as they appear in files, we can parse them later to see which APIs are in the same method and call components can be extracted using regex. In this way, we get one smali text file for  -->
 
 #### Pipeline Applicability
 
+The data pipeline is designed so that each python file can be runned as an independent step. The usage of the entire pipeline is shown in `get_data.py`.
 
-
-#### Legal Issues
+#### Legal Issues and Privacy
 
 In APKPure's [Terms of Use](https://apkpure.com/terms.html), it specifies that the website and its data are only for "personal use", and there is not any restrictions on scraping the website. Our use case in this project conforms to this term as there is no commercial intent and sales of any software and services.
 
 IN APKPure's [robots.txt](https://apkpure.com/robots.txt) file, a [sitemap.xml](https://apkpure.com/sitemap.xml) is provided for scraping the site. Because of this, we do not violate any implicit rules set by the robots.txt file.
 
-#### Data Privacy
-
-???
