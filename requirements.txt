@@ -3,3 +3,4 @@ beautifulsoup4
 lxml
 pyarrow
 sqlalchemy
+scipy
