@@ -8,9 +8,6 @@ def sample_df_random(apps, n=10):
     """
     history = []
     while True:
-        if len(history) == n:
-            break
-
         sample = apps.sample(1).squeeze()
         app_index = sample.package
         if app_index in history:

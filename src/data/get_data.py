@@ -3,14 +3,9 @@ import pandas as pd
 import os
 
 import preload
-import sample
+import sampling
 import decompile
 
-
-# def sample_random(apps, n=10):
-#     """Randomly sample n number of apps from the dataframe"""
-#     df = apps.sample(n)
-#     return ('https://apkpure.com/' + df.name_slug + '/' + df.package).to_list()
 
 def preload_data(fn):
     """Check if parquet data exists. If not, proceed to download"""
@@ -19,7 +14,7 @@ def preload_data(fn):
         exit
         # preload.run(data_dir)
 
-    print(f'Reading {fn}')
+    print(f'Reading {fn}.. ', end='')
     apps = pd.read_parquet(fn)
     print('done')
     return apps
@@ -39,9 +34,9 @@ def get_data(**config):
 
 
     if config['sampling']['method'] == 'random':
-        urls_iter = sample.sample_df_random(apps, config['sampling']['n'])
+        urls_iter = sampling.sample_df_random(apps)
 
-    decompile.run(data_dir, urls)
+    decompile.run(data_dir, urls_iter, config['sampling']['n'])
 
 if __name__ == "__main__":
     cfg = json.load(open('data-params.json'))

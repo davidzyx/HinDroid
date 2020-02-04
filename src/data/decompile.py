@@ -4,6 +4,7 @@ import os
 import subprocess
 import shutil
 from glob import glob
+import sys
 
 # !pip install beautifulsoup4
 from bs4 import BeautifulSoup
@@ -37,7 +38,7 @@ def get_apk(app_url):
     try:
         apk_url = soup.select('#iframe_download')[0].attrs['src']
     except:
-        return None
+        raise Exception('Error, download link not found')
     return requests.get(apk_url).content
 
 def save_apk(app_dir, apk):
@@ -48,7 +49,7 @@ def save_apk(app_dir, apk):
     :returns: filename of APK
     """
     print('Saving apk...')
-    apk_fn = os.path.join(app_dir + '.apk')
+    apk_fn = app_dir + '.apk'
     apk_fp = open(apk_fn, 'wb')
     apk_fp.write(apk)
     return apk_fn
@@ -74,7 +75,7 @@ def decompile(apk_fn, app_dir):
         print(command.stderr.decode())
         raise Exception('apktool error')
 
-def clean(app_dir):
+def decom_clean(app_dir):
     """Clean unwanted files and other folders (resources) from app directory
     
     :param app_dir: path to app directory
@@ -86,23 +87,38 @@ def clean(app_dir):
     )
     for dir in unwanted_subdirs:
         shutil.rmtree(os.path.abspath(dir))
+        
+def clean(main_dir, app_dir, package):
+    """Remove anything that is from this package"""
+    shutil.rmtree(app_dir)
+    apk_fn = app_dir + '.apk'
+    if os.path.exists(apk_fn):
+        os.remove(apk_fn)
 
-def run(data_dir, urls_iter):
+def run(data_dir, urls_iter, n):
     main_dir = os.path.join(data_dir, 'apps')
     if not os.path.exists(main_dir):
         os.mkdir(main_dir)
 
+    count = 0
     for url in urls_iter:
+        if count == n:
+            print('Complete')
+            break
+
+        print('Downloading', url)
         app_dir, package = prep_dir(main_dir, url)
         try:
             apk = get_apk(url)
             apk_fn = save_apk(app_dir, apk)
             decompile(apk_fn, app_dir)
-            clean(app_dir)
-            # log
-        except:
-            print('something bad happened')
-            shutil.rmtree(app_dir)
+            decom_clean(app_dir)
+            count += 1
+            print()  # empty line
+
+        except Exception as e:
+            print("Unexpected error:", e)
+            # raise
+            clean(main_dir, app_dir, package)
+            print()
             continue
-        finally:
-            pass
