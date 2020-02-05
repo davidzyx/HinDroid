@@ -3,6 +3,6 @@
     "preload": true,
     "sampling": {
         "method": "random",
-        "n": 2
+        "n": 30
     }
 }
