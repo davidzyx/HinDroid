@@ -1,8 +1,8 @@
 {
-    "data_dir": "../../data/",
+    "data_dir": "/Volumes/exf/Hindroid/data",
     "preload": true,
     "sampling": {
         "method": "random",
-        "n": 30
+        "n": 95
     }
 }

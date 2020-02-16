@@ -10,17 +10,17 @@ import sys
 from bs4 import BeautifulSoup
 
 
-def prep_dir(main_dir, url):
+def prep_dir(apps_dir, url):
     """Make the directory to store data specific to the requested app
 
-    :param main_dir: path to apps in data directory
+    :param apps_dir: path to apps in data directory
     :param url: app to be prepped/downloaded
     :returns: app_dir -- path to where app is going to be stored
     :returns: package -- package name of the app
     """
     print('Prepping...')
     package = url.split('/')[-1]
-    app_dir = os.path.join(main_dir, package)
+    app_dir = os.path.join(apps_dir, package)
     if not os.path.exists(app_dir):
         os.mkdir(app_dir)
     return app_dir, package
@@ -88,7 +88,7 @@ def decom_clean(app_dir):
     for dir in unwanted_subdirs:
         shutil.rmtree(os.path.abspath(dir))
         
-def clean(main_dir, app_dir, package):
+def clean(apps_dir, app_dir, package):
     """Remove anything that is from this package"""
     shutil.rmtree(app_dir)
     apk_fn = app_dir + '.apk'
@@ -96,9 +96,9 @@ def clean(main_dir, app_dir, package):
         os.remove(apk_fn)
 
 def run(data_dir, urls_iter, n):
-    main_dir = os.path.join(data_dir, 'apps')
-    if not os.path.exists(main_dir):
-        os.mkdir(main_dir)
+    apps_dir = os.path.join(data_dir, 'apps')
+    if not os.path.exists(apps_dir):
+        os.mkdir(apps_dir)
 
     count = 0
     for url in urls_iter:
@@ -107,7 +107,7 @@ def run(data_dir, urls_iter, n):
             break
 
         print('Downloading', url)
-        app_dir, package = prep_dir(main_dir, url)
+        app_dir, package = prep_dir(apps_dir, url)
         try:
             apk = get_apk(url)
             apk_fn = save_apk(app_dir, apk)
@@ -119,6 +119,6 @@ def run(data_dir, urls_iter, n):
         except Exception as e:
             print("Unexpected error:", e)
             # raise
-            clean(main_dir, app_dir, package)
+            clean(apps_dir, app_dir, package)
             print()
             continue
