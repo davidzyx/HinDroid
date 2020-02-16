@@ -1,8 +1,12 @@
 {
-    "data_dir": "../../data/",
-    "preload": true,
+    "data_dir": "/Volumes/exf/Hindroid/data",
+    "preload": false,
     "sampling": {
-        "method": "random",
-        "n": 2
-    }
+        "method": "category",
+        "category_targets": {
+            "communication": 2,
+            "tools": 2
+        }
+    },
+    "nproc": 4
 }

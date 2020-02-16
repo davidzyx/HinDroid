@@ -98,16 +98,16 @@ def clean_and_process(metadata):
     metadata = metadata[['package', 'name', 'category', 'name_slug', 'lastmod']]
     return metadata
 
-def run(datadir):
+def run(data_fp, nproc):
     """Runs the first step of the data pipeline
-    Gets the entire sitemap and stores it in datadir
+    Gets the entire sitemap and stores it in data_fp
 
-    :param datadir: output directory for metadata.parquet
+    :param data_fp: output filepath for metadata.parquet
     """
     sitemap_urls = parse_main_xml('https://apkpure.com/sitemap.xml')
 
     print('Getting app data...')
-    with Pool(16) as p:
+    with Pool(nproc) as p:
         df_list = list(tqdm(
             p.imap_unordered(extract_apps, sitemap_urls),
             total=len(sitemap_urls)
@@ -116,7 +116,18 @@ def run(datadir):
 
     metadata = clean_and_process(metadata)
 
-    print(f'Saving to {datadir} ...')
-    metadata.to_parquet(
-        os.path.join(datadir, 'test.parquet'), engine='pyarrow'
-    )
+    print(f'Saving to {data_fp} ...')
+    metadata.to_parquet(data_fp, engine='pyarrow')
+
+def load_data(data_dir, nproc, data_fp=None):
+    """Check if parquet data exists. If not, proceed to download"""
+    if not data_fp:
+        data_fp = os.path.join(data_dir, 'metadata.parquet')
+    if not os.path.exists(data_fp):
+        print('Preload file does not exist. Downloading..')
+        run(data_fp, nproc)
+
+    print(f'Reading {data_fp}.. ')
+    apps = pd.read_parquet(data_fp)
+    print('done')
+    return apps

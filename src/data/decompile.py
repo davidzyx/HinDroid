@@ -88,18 +88,14 @@ def decom_clean(app_dir):
     for dir in unwanted_subdirs:
         shutil.rmtree(os.path.abspath(dir))
         
-def clean(apps_dir, app_dir, package):
+def clean(app_dir, package):
     """Remove anything that is from this package"""
     shutil.rmtree(app_dir)
     apk_fn = app_dir + '.apk'
     if os.path.exists(apk_fn):
         os.remove(apk_fn)
 
-def run(data_dir, urls_iter, n):
-    apps_dir = os.path.join(data_dir, 'apps')
-    if not os.path.exists(apps_dir):
-        os.mkdir(apps_dir)
-
+def run(apps_dir, urls_iter, n):
     count = 0
     for url in urls_iter:
         if count == n:
@@ -119,6 +115,6 @@ def run(data_dir, urls_iter, n):
         except Exception as e:
             print("Unexpected error:", e)
             # raise
-            clean(apps_dir, app_dir, package)
+            clean(app_dir, package)
             print()
             continue
