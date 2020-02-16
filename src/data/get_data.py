@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 
@@ -66,6 +65,5 @@ def get_data(**config):
 def clean_data(**config):
     data_dir = config['data_dir']
     raw_dir = os.path.join(data_dir, 'raw')
-    proc_dir = os.path.join(data_dir, 'processed')
-    for dir_i in [raw_dir, proc_dir]:
-        shutil.rmtree(dir_i,ignore_errors=True)
+    for dir_i in [raw_dir]:
+        shutil.rmtree(dir_i, ignore_errors=True)

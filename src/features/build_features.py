@@ -1,106 +1,50 @@
-import re
-import pandas as pd
-import numpy as np
-from glob import glob
-import networkx as nx
-import matplotlib.pyplot as plt
-# from functools import reduce
 import os
-from itertools import combinations
-
-# !conda install -c conda-forge tqdm -y
+from glob import glob
 from tqdm import tqdm
+import shutil
 # !pip install multiprocess
 from multiprocess import Pool
 
+from src.features.smali_features import SmaliApp
+from src.data.get_data import prep_dir
 
-class SmaliApp():
-    LINE_PATTERN = re.compile('(\.method.*)|(\.end method)|(invoke-.*)')
-    INVOKE_PATTERN = re.compile(
-        "(invoke-\w+)(?:\/range)? {.*}, "     # invoke
-        + "(\[*[ZBSCFIJD]|\[*L[\w\/$-]+;)->"   # package
-        + "([\w$]+|<init>).+"                 # method
-    )
-    
-    def __init__(self, app_dir):
-        self.app_dir = app_dir
-        self.package = app_dir.split('/')[-2]
-        self.smali_fn_ls = sorted(glob(
-            os.path.join(app_dir, 'smali*/**/*.smali'), recursive=True
+def extract_save_raw(apps_dir, out_dir, nproc, label=False):
+    app_dirs = glob(os.path.join(apps_dir, '*/'))
+
+    if label:
+        raise NotImplementedError
+
+    with Pool(nproc) as p:
+        smali_apps = list(tqdm(
+            p.imap_unordered(SmaliApp, app_dirs), total=len(app_dirs)
         ))
-        if len(self.smali_fn_ls) == 0:
-            raise Exception('Invalid app directory')
-
-        self.info = self.extract_info()
-        self.info.to_csv(os.path.join(app_dir, 'info.csv'), index=None)
-
-    def _extract_line_file(self, fn):
-        with open(fn) as f:
-            data = SmaliApp.LINE_PATTERN.findall(f.read())
-            if len(data) == 0: return None
-        
-        data = np.array(data)
-        assert data.shape[1] == 3  # 'start', 'end', 'call'
-        
-        relpath = os.path.relpath(fn, start=self.app_dir)
-        data = np.hstack((data, np.full(data.shape[0], relpath).reshape(-1, 1)))
-        return data
     
-    def _assign_code_block(df):
-        df['code_block_id'] = (df.start.str.len() != 0).cumsum()
-        return df
+    print('Saving raw features')
+    for app in smali_apps:
+        out_path = os.path.join(out_dir, app.package + '.csv')
+        app.info.to_csv(out_path, index=None)
+
+
+def build_raw_features(**config):
+    """Main function of data ingestion. Runs according to config file"""
+    data_dir = config['data_dir']
+    prep_dir(data_dir)
+
+    # Set number of process
+    if 'nproc' not in config:
+        config['nproc'] = 2
     
-    def _assign_package_invoke_method(df):
-        res = (
-            df.call.str.extract(SmaliApp.INVOKE_PATTERN)
-            .rename(columns={0: 'invocation', 1: 'library', 2: 'method_name'})
-        )
-        return pd.concat([df, res], axis=1)
-        
-    
-    def extract_info(self):
-        agg = [self._extract_line_file(f) for f in self.smali_fn_ls]
-        df = pd.DataFrame(
-            np.vstack([i for i in agg if i is not None]),
-            columns=['start', 'end', 'call', 'relpath']
-        )
+    raw_dir = os.path.join(data_dir, 'raw')
+    raw_benign_apps_dir = os.path.join(raw_dir, 'benign_apps')
+    proc_dir = os.path.join(data_dir, 'processed')
+    proc_benign_dir = os.path.join(proc_dir, 'benign')
+    proc_malicious_dir = os.path.join(proc_dir, 'malicious')
 
-        df = SmaliApp._assign_code_block(df)
-        df = SmaliApp._assign_package_invoke_method(df)
-
-        # clean
-        assert (df.start.str.len() > 0).sum() == (df.end.str.len() > 0).sum()
-        df = (
-            df[df.call.str.len() > 0]
-            .drop(columns=['start', 'end']).reset_index(drop=True)
-        )
-
-        # verify no nans
-        extract_nans = df.isna().sum(axis=1)
-        assert (extract_nans == 0).all(), f'nan in {extract_nans.values.nonzero()}'
-
-        return df
+    extract_save_raw(raw_benign_apps_dir, proc_benign_dir, config['nproc'], label=False)
 
 
-class SmaliHIN():
-    
-    def __init__(self, apps_dir, nproc=4, n=8):
-        self.app_dirs = glob(os.path.join(apps_dir, '*/'))
-        with Pool(nproc) as p:
-            smali_apps = list(tqdm(p.imap_unordered(SmaliApp, self.app_dirs), total=len(self.app_dirs)))
-        self.apps = {app.package: app for app in smali_apps}
-        self.packages = list(self.apps.keys())
-        
-    def construct_graph_A(self):
-        unique_APIs_app = [set(app.info.package + '->' + app.info.method_name) for app in self.apps.values()]
-        unique_APIs_all = set.union(*unique_APIs_app)
-        
-        A_cols = []
-        for unique in unique_APIs_all:
-            bag_of_API = [1 if unique in app_set else 0 for app_set in unique_APIs_app]
-            A_cols.append(bag_of_API)
-            
-        A_mat = np.array(A_cols).T
-        # shape: (# of apps, # of unique APIs)
-        self.A_mat = A_mat
-        return self.A_mat
+def clean_raw_features(**config):
+    data_dir = config['data_dir']
+    proc_dir = os.path.join(data_dir, 'processed')
+    for dir_i in [proc_dir]:
+        shutil.rmtree(dir_i, ignore_errors=True)
