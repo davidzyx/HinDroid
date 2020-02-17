@@ -48,13 +48,12 @@ def save_apk(app_dir, apk):
     :param apk: APK package bytes
     :returns: filename of APK
     """
-    print('Saving apk...')
     apk_fn = app_dir + '.apk'
     apk_fp = open(apk_fn, 'wb')
     apk_fp.write(apk)
     return apk_fn
 
-def decompile(apk_fn, app_dir):
+def apktool_decompile(apk_fn, app_dir):
     """Decompile the apk package to its directory using apktool
 
     :param apk_fn: filename for the APK
@@ -95,8 +94,18 @@ def clean(app_dir, package):
     if os.path.exists(apk_fn):
         os.remove(apk_fn)
 
-def run(apps_dir, urls_iter, n):
+def validity_check(app_dir):
+    """Check if decompiled app directory has smali files"""
+    smali_fn_ls = sorted(glob(
+        os.path.join(app_dir, 'smali*/**/*.smali'), recursive=True
+    ))
+    if len(smali_fn_ls) == 0:
+        raise Exception('App has no smali files')
+
+def decompile(apps_dir, urls_iter, n):
+    """TODO: multiprocess this? may be worth trying"""
     count = 0
+    app_dir_ls = []
     for url in urls_iter:
         if count == n:
             print('Complete')
@@ -107,8 +116,10 @@ def run(apps_dir, urls_iter, n):
         try:
             apk = get_apk(url)
             apk_fn = save_apk(app_dir, apk)
-            decompile(apk_fn, app_dir)
+            apktool_decompile(apk_fn, app_dir)
             decom_clean(app_dir)
+            validity_check(app_dir)
+            app_dir_ls.append(app_dir)
             count += 1
             print()  # empty line
 
@@ -118,3 +129,4 @@ def run(apps_dir, urls_iter, n):
             clean(app_dir, package)
             print()
             continue
+    return app_dir_ls
