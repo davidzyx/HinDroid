@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 
 class SmaliApp():
-    LINE_PATTERN = re.compile('(\.method.*)|(\.end method)|(invoke-.*)')
+    LINE_PATTERN = re.compile('^(\.method.*)|^(\.end method)|^[ ]{4}(invoke-.*)', flags=re.M)
     INVOKE_PATTERN = re.compile(
         "(invoke-\w+)(?:\/range)? {.*}, "     # invoke
         + "(\[*[ZBSCFIJD]|\[*L[\w\/$-]+;)->"   # package
@@ -27,7 +27,9 @@ class SmaliApp():
             os.path.join(app_dir, 'smali*/**/*.smali'), recursive=True
         ))
         if len(self.smali_fn_ls) == 0:
-            raise Exception('Invalid app directory')
+            print('Skipping invalid app directory:', self.app_dir)
+            return
+            raise Exception('Invalid app directory', app_dir)
 
         self.info = self.extract_info()
 
@@ -66,7 +68,7 @@ class SmaliApp():
         df = SmaliApp._assign_package_invoke_method(df)
 
         # clean
-        assert (df.start.str.len() > 0).sum() == (df.end.str.len() > 0).sum()
+        assert (df.start.str.len() > 0).sum() == (df.end.str.len() > 0).sum(), f'Number of start and end are not equal in {self.app_dir}'
         df = (
             df[df.call.str.len() > 0]
             .drop(columns=['start', 'end']).reset_index(drop=True)
@@ -74,7 +76,8 @@ class SmaliApp():
 
         # verify no nans
         extract_nans = df.isna().sum(axis=1)
-        assert (extract_nans == 0).all(), f'nan in {extract_nans.values.nonzero()}'
+        assert (extract_nans == 0).all(), f'nan in {extract_nans.values.nonzero()} for {self.app_dir}'
+        # self.info.loc[self.info.isna().sum(axis=1) != 0, :]
 
         return df
 

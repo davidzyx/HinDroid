@@ -20,9 +20,13 @@ def extract_save_raw(apps_dir, out_dir, nproc, label=False):
         ))
     
     print('Saving raw features')
-    for app in smali_apps:
-        out_path = os.path.join(out_dir, app.package + '.csv')
-        app.info.to_csv(out_path, index=None)
+    smali_apps = [app for app in smali_apps if app.info]
+    for app in tqdm(smali_apps):
+        try:  # 
+            out_path = os.path.join(out_dir, app.package + '.csv')
+            app.info.to_csv(out_path, index=None)
+        except:
+            continue
 
 
 def build_raw_features(**config):
