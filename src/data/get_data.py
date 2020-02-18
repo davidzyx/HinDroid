@@ -73,24 +73,28 @@ def get_data(**config):
                             (sampling.dynamic_sample_category(sitemaps_by_cat, cat), n)
                         )
 
-        # Stage 1: get apks from iterators and decompile
-        if class_i_config['stage'] in ['sampling', 'apk']:
+        # Stage 1: get apks from url iterators and decompile
+        if class_i_config['stage'] in ['sampling']:
             if class_i_config['stage'] == 'apk':
                 raise NotImplementedError
             # Extract raw features
             app_dir_ls = []
             for job_iter, job_n in apk_jobs:
-                ls = decompile.decompile(raw_classes_dirs[class_i], job_iter, job_n)
+                ls = decompile.download_decompile(raw_classes_dirs[class_i], job_iter, job_n)
                 app_dir_ls += ls
             app_dirs[class_i] = app_dir_ls
             continue
+
+        if class_i_config['stage'] in ['apk']:
+            assert class_i_config['origin'] == 'external'
+            app_dir_ls = decompile.decompile_apk_dir(class_i_config['external_dir'])
 
         # Stage 2: decompile
         if class_i_config['stage'] in ['apk', 'smali']:
             if class_i_config['origin'] == 'external':
                 if class_i_config['external_structure'] == 'flat':
                     app_dir_ls = glob(
-                        os.path.join(class_i_config['external_dir'], '*')
+                        os.path.join(class_i_config['external_dir'], '*/')
                     )
                     assert class_i_config['sampling']['method'] == 'random'
                     app_dir_ls = random.sample(
@@ -98,7 +102,7 @@ def get_data(**config):
                     )
                 elif class_i_config['external_structure'] == 'by_category_variety':
                     app_dir_ls = glob(
-                        os.path.join(class_i_config['external_dir'], '*', '*', '*')
+                        os.path.join(class_i_config['external_dir'], '*', '*', '*/')
                     )
                     if class_i_config['sampling']['method'] == 'random':
                         app_dir_ls = random.sample(
@@ -111,7 +115,7 @@ def get_data(**config):
 
                 print("Copying apps from external directory")
                 for app_dir in app_dir_ls:
-                    app_package = os.path.basename(app_dir)
+                    app_package = os.path.basename(os.path.dirname(app_dir))
                     shutil.copytree(
                         app_dir,
                         os.path.join(raw_classes_dirs[class_i], app_package)

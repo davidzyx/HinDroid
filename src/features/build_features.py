@@ -6,8 +6,15 @@ import shutil
 # !pip install multiprocess
 from multiprocess import Pool
 
-from src.features.smali_features import SmaliApp
+from src.features.smali import SmaliApp
 from src.data.get_data import prep_dir
+from src.features.app_features import FeatureBuilder
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.metrics import confusion_matrix, f1_score
 
 def extract_save_raw_class(raw_dir, interim_dir, class_i, nproc):
     app_dirs = glob(os.path.join(raw_dir, '*/'))
@@ -62,7 +69,36 @@ def build_features(**config):
     # Aggregate csv files
     agg_df, labels = aggregate_raw(interim_classes_dirs)
     
-    return agg_df, labels
+    fb = FeatureBuilder(agg_df, labels)
+    proc_dir = os.path.join(data_dir, 'processed')
+    os.mkdir(proc_dir)
+    fb.out.to_csv(os.path.join(proc_dir, 'processed.csv'))
+
+    lr_f1 = []
+    rf_f1 = []
+    gb_f1 = []
+    for i in range(10):
+        X_train, X_test, y_train, y_test = train_test_split(
+            fb.out, fb.labels == 'class1',
+            test_size=0.3
+        )
+        lr = LogisticRegression(solver='liblinear')
+        lr.fit(X_train, y_train)
+        lr_f1.append(f1_score(y_test, lr.predict(X_test)))
+        
+        rf = RandomForestClassifier(n_estimators=10)
+        rf.fit(X_train, y_train)
+        rf_f1.append(f1_score(y_test, rf.predict(X_test)))
+
+        gb = GradientBoostingClassifier()
+        gb.fit(X_train, y_train)
+        gb_f1.append(f1_score(y_test, gb.predict(X_test)))
+
+    print("Average f1 scores:")
+    print(np.mean(lr_f1), np.mean(rf_f1), np.mean(gb_f1))
+    print("Std of f1 scores:")
+    print(np.std(lr_f1), np.std(rf_f1), np.std(gb_f1))
+    
 
 
 def clean_features(**config):

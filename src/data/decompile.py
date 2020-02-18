@@ -10,7 +10,7 @@ import sys
 from bs4 import BeautifulSoup
 
 
-def prep_dir(apps_dir, url):
+def prep_dir_url(apps_dir, url):
     """Make the directory to store data specific to the requested app
 
     :param apps_dir: path to apps in data directory
@@ -20,6 +20,13 @@ def prep_dir(apps_dir, url):
     """
     print('Prepping...')
     package = url.split('/')[-1]
+    app_dir = os.path.join(apps_dir, package)
+    if not os.path.exists(app_dir):
+        os.mkdir(app_dir)
+    return app_dir, package
+
+def prep_dir_apk(apps_dir, apk_fn):
+    package = os.path.basename(apk_fn)[:-4]  # TODO: not ending in .apk
     app_dir = os.path.join(apps_dir, package)
     if not os.path.exists(app_dir):
         os.mkdir(app_dir)
@@ -102,7 +109,7 @@ def validity_check(app_dir):
     if len(smali_fn_ls) == 0:
         raise Exception('App has no smali files')
 
-def decompile(apps_dir, urls_iter, n):
+def download_decompile(apps_dir, urls_iter, n):
     """TODO: multiprocess this? may be worth trying"""
     count = 0
     app_dir_ls = []
@@ -112,7 +119,7 @@ def decompile(apps_dir, urls_iter, n):
             break
 
         print('Downloading', url)
-        app_dir, package = prep_dir(apps_dir, url)
+        app_dir, package = prep_dir_url(apps_dir, url)
         try:
             apk = get_apk(url)
             apk_fn = save_apk(app_dir, apk)
@@ -129,4 +136,28 @@ def decompile(apps_dir, urls_iter, n):
             clean(app_dir, package)
             print()
             continue
+    return app_dir_ls
+
+def decompile_apk_dir(apps_dir, out_dir=None):
+    apk_ls = glob(os.path.join(apps_dir, '*.apk'))
+    assert all(apk.endswith('.apk') for apk in apk_ls)
+
+    # count = 0
+    app_dir_ls = []
+    for apk_fn in apk_ls:
+        try:
+            app_dir, package = prep_dir_apk(apps_dir, apk_fn)
+            apktool_decompile(apk_fn, app_dir)
+            decom_clean(app_dir)
+            validity_check(app_dir)
+            app_dir_ls.append(app_dir)
+            print()  # empty line
+
+        except Exception as e:
+            print("Unexpected error:", e)
+            # raise
+            clean(app_dir, package)
+            print()
+            continue
+
     return app_dir_ls

@@ -1,27 +1,25 @@
 {
-    "nproc": 4,
+    "nproc": 2,
     "data_dir": "/Volumes/exf/Hindroid/data",
     "data_classes": {
         "class0": {
-            "stage": "sampling",
-            "origin": "apkpure",
-            "apkpure_preload_metadata_fp": false,
+            "stage": "apk",
+            "origin": "external",
+            "external_dir": "test/communication",
+            "external_structure": "flat",
             "sampling": {
-                "method": "category",
-                "category_targets": {
-                    "communication": 10
-                }
+                "method": "random",
+                "n": 4
             }
         },
         "class1": {
-            "stage": "sampling",
-            "origin": "apkpure",
-            "apkpure_preload_metadata_fp": false,
+            "stage": "apk",
+            "origin": "external",
+            "external_dir": "test/tools",
+            "external_structure": "flat",
             "sampling": {
-                "method": "category",
-                "category_targets": {
-                    "tools": 10
-                }
+                "method": "random",
+                "n": 4
             }
         }
     }

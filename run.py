@@ -16,7 +16,13 @@ def load_params(fp):
 
 
 def main(targets):
-    cfg = load_params(DATA_PARAMS)
+    # make the data target
+    if 'data' in targets:
+        cfg = load_params(DATA_PARAMS)
+    elif 'data-test' in targets:
+        cfg = load_params(TEST_PARAMS)
+    else:
+        return
 
     # make the clean target
     if 'clean' in targets:
@@ -25,10 +31,11 @@ def main(targets):
         return
 
     # make the data target
-    if 'data' in targets:
+    if 'ingest' in targets:
         get_data(**cfg)
 
     if 'process' in targets:
+        get_data(**cfg)
         build_features(**cfg)
 
 
