@@ -2,7 +2,7 @@ import sys
 import json
 
 from src.data.get_data import get_data, clean_raw
-from src.features.build_features import build_raw_features, clean_proc_features
+from src.features.build_features import build_features, clean_features
 
 DATA_PARAMS = 'config/data-params.json'
 TEST_PARAMS = 'config/test-params.json'
@@ -21,7 +21,7 @@ def main(targets):
     # make the clean target
     if 'clean' in targets:
         clean_raw(**cfg)
-        clean_proc_features(**cfg)
+        clean_features(**cfg)
         return
 
     # make the data target
@@ -29,7 +29,7 @@ def main(targets):
         get_data(**cfg)
 
     if 'process' in targets:
-        build_raw_features(**cfg)
+        build_features(**cfg)
 
 
     return

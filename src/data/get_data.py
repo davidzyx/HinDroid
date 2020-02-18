@@ -14,23 +14,23 @@ def prep_dir(data_dir, data_classes):
         os.mkdir(data_dir)
     
     raw_dir = os.path.join(data_dir, 'raw')
-    proc_dir = os.path.join(data_dir, 'processed')
+    interim_dir = os.path.join(data_dir, 'interim')
     raw_classes_dirs = {
         class_i: os.path.join(raw_dir, class_i)
         for class_i in data_classes.keys()
     }
-    proc_classes_dirs = {
-        class_i: os.path.join(proc_dir, class_i)
+    interim_classes_dirs = {
+        class_i: os.path.join(interim_dir, class_i)
         for class_i in data_classes.keys()
     }
 
-    for dir_i in [raw_dir, proc_dir] + \
+    for dir_i in [raw_dir, interim_dir] + \
                  list(raw_classes_dirs.values()) + \
-                 list(proc_classes_dirs.values()):
+                 list(interim_classes_dirs.values()):
         if not os.path.exists(dir_i):
             os.mkdir(dir_i)
 
-    return raw_dir, proc_dir, raw_classes_dirs, proc_classes_dirs
+    return raw_dir, interim_dir, raw_classes_dirs, interim_classes_dirs
 
 # def 
 
@@ -38,7 +38,7 @@ def prep_dir(data_dir, data_classes):
 def get_data(**config):
     """Main function of data ingestion. Runs according to config"""
     data_dir = config['data_dir']
-    raw_dir, proc_dir, raw_classes_dirs, proc_classes_dirs = \
+    raw_dir, interim_dir, raw_classes_dirs, interim_classes_dirs = \
         prep_dir(data_dir, config['data_classes'])
 
     # Set number of process, default to 2
