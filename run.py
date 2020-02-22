@@ -1,8 +1,10 @@
 import sys
 import json
 
-from src.data.get_data import get_data, clean_raw
-from src.features.build_features import build_features, clean_features
+import src.utils as utils
+from src.utils import prep_dir, clean_raw, clean_features
+from src.data.get_data import get_data
+from src.features.build_features import build_features
 
 DATA_PARAMS = 'config/data-params.json'
 TEST_PARAMS = 'config/test-params.json'
@@ -24,6 +26,8 @@ def main(targets):
     else:
         return
 
+    prep_dir(**cfg)
+
     # make the clean target
     if 'clean' in targets:
         clean_raw(**cfg)
@@ -35,7 +39,6 @@ def main(targets):
         get_data(**cfg)
 
     if 'process' in targets:
-        get_data(**cfg)
         build_features(**cfg)
 
 

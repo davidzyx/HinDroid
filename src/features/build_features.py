@@ -7,7 +7,6 @@ import shutil
 from multiprocess import Pool
 
 from src.features.smali import SmaliApp
-from src.data.get_data import prep_dir
 from src.features.app_features import FeatureBuilder
 
 import numpy as np
@@ -103,7 +102,5 @@ def build_features(**config):
 
 def clean_features(**config):
     data_dir = config['data_dir']
-    interim_dir = os.path.join(data_dir, 'interim')
-    proc_dir = os.path.join(data_dir, 'processed')
-    for dir_i in [interim_dir, proc_dir]:
-        shutil.rmtree(dir_i, ignore_errors=True)
+    interim_dir = os.path.join(data_dir, config['data_subdir_names']['interim'])
+    shutil.rmtree(raw_dir, ignore_errors=True)

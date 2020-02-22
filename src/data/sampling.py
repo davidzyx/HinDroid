@@ -23,6 +23,7 @@ def df_random(apps):
 
         yield f"https://apkpure.com/{sample.name_slug}/{sample.package}"
 
+
 def construct_categories():
     """Construct a dict of sitemaps by their app category"""
     sitemaps_ls = parse_main_xml('https://apkpure.com/sitemap.xml')
@@ -33,7 +34,8 @@ def construct_categories():
 
     return dict(sitemaps_by_category)
 
-def dynamic_sample_category(sitemaps_by_category, category):
+
+def dynamic_category(sitemaps_by_category, category):
     """Randomly sample apps from a specific category.
     Returns an iterator yielding a url from apkpure.com
 
@@ -53,6 +55,7 @@ def dynamic_sample_category(sitemaps_by_category, category):
 
         yield sampled_url
 
+
 def dynamic_random(sitemaps_by_category):
     """Randomly sample apps from any category.
     Returns an iterator yielding a url from apkpure.com
@@ -61,7 +64,7 @@ def dynamic_random(sitemaps_by_category):
     :yields: url
     """
     iters_dict = {
-        category: dynamic_sample_category(sitemaps_by_category, category)
+        category: dynamic_category(sitemaps_by_category, category)
         for category in sitemaps_by_category.keys()
     }
     while True:

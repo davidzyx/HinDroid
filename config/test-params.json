@@ -1,18 +1,40 @@
 {
-    "nproc": 2,
-    "data_dir": "/Volumes/exf/Hindroid/data",
+    "nproc": 4,
+    "data_dir": "/Volumes/DataDrive/HinDroid/data",
+    "data_subdirs": {
+        "raw": "raw",
+        "interim": "interim",
+        "processed": "processed"
+    },
     "data_classes": {
         "class0": {
-            "stage": "apk",
-            "origin": "external",
-            "external_dir": "test/communication",
-            "external_structure": "flat",
+            "stage": "apkpure",
+            "origin": "apkpure",
             "sampling": {
-                "method": "random",
-                "n": 4
+                "method": "category",
+                "category_targets": {
+                    "communication": 4,
+                    "tools": 4
+                }
             }
         },
         "class1": {
+            "stage": "apkpure",
+            "origin": "apkpure",
+            "sampling": {
+                "method": "random",
+                "n": 1
+            }
+        },
+        "class2": {
+            "stage": "url",
+            "origin": "apkpure",
+            "sampling": {
+                "method": "url",
+                "url_targets": ["https://apkpure.com/mainova-frankfurt-marathon/de.mikatiming.frankfurtmarathon"]
+            }
+        },
+        "class3": {
             "stage": "apk",
             "origin": "external",
             "external_dir": "test/tools",
