@@ -7,6 +7,7 @@ from glob import glob
 import sys
 from pathos.threading import ThreadPool
 from pathos.multiprocessing import ProcessPool
+from pathos.util import print_exc_info
 
 # !pip install beautifulsoup4
 from bs4 import BeautifulSoup
@@ -30,7 +31,8 @@ def get_apk(app_url):
     :param app_url: url to app on APKPure
     :returns: APK in bytes
     """
-    print(f"Downloading apk {app_url.split('/')[-1]}...")
+    package = app_url.split('/')[-1]
+    print(f"Downloading apk {package}...")
     app_url += '/download?from=details'
     try:
         download_page = requests.get(app_url)
@@ -41,7 +43,7 @@ def get_apk(app_url):
     try:
         apk_url = soup.select('#iframe_download')[0].attrs['src']
     except:
-        raise DecompileException('Error, download link not found')
+        raise DecompileException(f"Err: Download link not found in {package}")
     return requests.get(apk_url).content
 
 
@@ -80,7 +82,7 @@ def apktool_decompile(apk_fn, app_dir):
         raise DecompileException('apktool error')
 
 
-def decom_clean(app_dir):
+def clean(app_dir):
     """Clean unwanted files and other folders (resources) from app directory
 
     :param app_dir: path to app directory
@@ -94,7 +96,7 @@ def decom_clean(app_dir):
         shutil.rmtree(os.path.abspath(dir))
 
 
-def clean(app_dir, package):
+def remove(app_dir, package):
     """Remove anything that is from this package"""
     shutil.rmtree(app_dir)
     apk_fn = app_dir + '.apk'
@@ -133,6 +135,7 @@ def mt_download_apk(urls, out_dir, nproc):
 
 
 def decompile_apk_dir(apps_dir, out_dir=None):
+    """depr"""
     apk_ls = glob(os.path.join(apps_dir, '*.apk'))
     assert all(apk.endswith('.apk') for apk in apk_ls)
 
@@ -142,7 +145,7 @@ def decompile_apk_dir(apps_dir, out_dir=None):
         try:
             app_dir, package = prep_dir_apk(apps_dir, apk_fn)
             apktool_decompile(apk_fn, app_dir)
-            decom_clean(app_dir)
+            clean(app_dir)
             validity_check(app_dir)
             app_dir_ls.append(app_dir)
             print()  # empty line
@@ -161,18 +164,18 @@ def decompile_one_apk(apk_fp, out_dir):
     try:
         app_dir, package = prep_dir_apk(out_dir, apk_fp)
         apktool_decompile(apk_fp, app_dir)
-        decom_clean(app_dir)
+        clean(app_dir)
         validity_check(app_dir)
         print()
         return app_dir
     except DecompileException as e:
-        print("Unexpected error:", e)
-        clean(app_dir, package)
+        print(print_exc_info())
         print()
+        remove(app_dir, package)
         return None
 
 
-def decompile_apks(apk_fpaths, out_dir, nproc):
+def decompile_apks(apk_fpaths, out_dir):
     apk_dirs = []
     for apk_fp in apk_fpaths:
         apk_dirs.append(decompile_one_apk(apk_fp, out_dir))
@@ -180,7 +183,7 @@ def decompile_apks(apk_fpaths, out_dir, nproc):
 
 
 def mt_decompile_apks(apk_fpaths, out_dir, nproc):
-    with ProcessPool(nproc) as p:
+    with ThreadPool(nproc) as p:
         apk_dirs = p.map(decompile_one_apk, apk_fpaths, [out_dir] * len(apk_fpaths))
     # apk_dirs = [i for i in apk_dirs if i is not None]
     return apk_dirs
