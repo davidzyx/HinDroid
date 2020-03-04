@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections import defaultdict
 
 RAW_DIR = None
 ITRM_DIR = None
@@ -49,3 +50,19 @@ def clean_features(**cfg):
     data_dir = cfg['data_dir']
     itrm_dir = os.path.join(data_dir, cfg['data_subdirs']['interim'])
     shutil.rmtree(itrm_dir, ignore_errors=True)
+
+
+class UniqueIdAssigner():
+    def __init__(self):
+        self.uid_lookup = defaultdict(lambda: len(self.uid_lookup))
+        self.value_by_id = lambda: list(self.uid_lookup.keys())
+
+    def add(self, *values):
+        uids = [self.uid_lookup[v] for v in values]
+        return uids
+
+    def __getitem__(self, k):
+        return self.value_by_id()[k]
+
+    def __len__(self):
+        return len(self.uid_lookup)

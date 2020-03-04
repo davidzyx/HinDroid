@@ -5,3 +5,4 @@ pyarrow
 sqlalchemy
 scipy
 pathos
+p_tqdm
