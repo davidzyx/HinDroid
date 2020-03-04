@@ -8,5 +8,5 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt  && \
 
 RUN apt-get install -y htop
 
-RUN conda update pandas -c -y \
-		&& conda clean -afy && fix-permissions $CONDA_DIR
+RUN conda update pandas -y \
+	&& conda clean -afy && fix-permissions $CONDA_DIR
