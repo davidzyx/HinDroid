@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import os
 from itertools import combinations
 from collections import defaultdict
-from p_tqdm import p_map
+from p_tqdm import p_map, p_umap
+from scipy import sparse
 
 # !conda install -c conda-forge tqdm -y
 from tqdm import tqdm
@@ -85,22 +86,25 @@ class SmaliApp():
         return df
 
 
-class SmaliHIN():
-    
-    def __init__(self, csvs, nproc=4):
-        self.nproc = nproc
-        self.csvs = csvs
-        self.packages = [os.path.basename(csv)[:-4] for csv in csvs]
-        self.apps = p_map(SmaliHIN.csv_proc, csvs, num_cpus=nproc)
+class HINProcess():
 
+    def __init__(self, csvs, out_dir, nproc=4):
+        self.csvs = csvs
+        self.out_dir = out_dir
+        self.nproc = nproc
+        self.packages = [os.path.basename(csv)[:-4] for csv in csvs]
+        self.infos = p_map(HINProcess.csv_proc, csvs, num_cpus=nproc)
+        self.prep_ids()
+
+    def prep_ids(self):
         self.API_uid = UniqueIdAssigner()
-        for info in self.apps:
+        for info in self.infos:
             info['api_id'] = self.API_uid.add(*info.api)
 
         self.APP_uid = UniqueIdAssigner()
         for package in self.packages:
             self.APP_uid.add(package)
-        
+
     def csv_proc(csv):
         df = pd.read_csv(
             csv, dtype={'method_name': str}, keep_default_na=False
@@ -109,7 +113,7 @@ class SmaliHIN():
         return df
 
     def construct_graph_A(self):
-        unique_APIs_app = [set(info.api_id) for info in self.apps]
+        unique_APIs_app = [set(info.api_id) for info in self.infos]
         unique_APIs_all = set.union(*unique_APIs_app)
 
         A_cols = []
@@ -118,46 +122,68 @@ class SmaliHIN():
             A_cols.append(bag_of_API)
 
         A_mat = np.array(A_cols).T  # shape: (# of apps, # of unique APIs)
-        self.A_mat = A_mat
-        
-    def prepare_graph_B_app(info):
+        return A_mat
+
+    def _prep_graph_B(info):
         func_pairs = lambda d: list(combinations(d.api_id.unique(), 2))
         edges = pd.DataFrame(
             info.groupby('code_block_id').apply(func_pairs).explode()
             .reset_index(drop=True).drop_duplicates().dropna()
             .values.tolist()
         ).values.T.astype('uint32')
-        
         return edges
-        
-    def prepare_graph_P_app(info):
+
+    def _prep_graph_P(info):
         func_pairs = lambda d: list(combinations(d.api_id.unique(), 2))
         edges = pd.DataFrame(
             info.groupby('library').apply(func_pairs).explode()
             .reset_index(drop=True).drop_duplicates().dropna()
             .values.tolist()
         ).values.T.astype('uint32')
-        
         return edges
-    
-    def prepare_graph_BP(self):
-        
-        Bs = p_map(SmaliHIN.prepare_graph_B_app, self.apps, num_cpus=self.nproc)
-        p_map(lambda arr, file: np.save(file, arr), Bs, [csv[:-4] + '.B' for csv in self.csvs])
-        Ps = p_map(SmaliHIN.prepare_graph_P_app, self.apps, num_cpus=self.nproc)
-        p_map(lambda arr, file: np.save(file, arr), Ps, [csv[:-4] + '.P' for csv in self.csvs])
+
+    def _save_interim_BP(Bs, Ps, csvs, nproc):
+        p_umap(
+            lambda arr, file: np.save(file, arr),
+            Bs + Ps,
+            [f[:-4] + '.B' for f in csvs] + [f[:-4] + '.P' for f in csvs],
+            num_cpus=nproc
+        )
+
+    def prep_graph_BP(self, out=True):
+        Bs = p_map(HINProcess._prep_graph_B, self.infos, num_cpus=self.nproc)
+        Ps = p_map(HINProcess._prep_graph_P, self.infos, num_cpus=self.nproc)
+        if out:
+            HINProcess._save_interim_BP(Bs, Ps, self.csvs, self.nproc)
+        return Bs, Ps
+
+    def _build_coo(arr_ls, shape):
+        arr = np.hstack(arr_ls)
+        arr = np.hstack([arr, arr[::-1, :]])
+        values = np.full(shape=arr.shape[1], fill_value=1, dtype='i1')
+        sparse_arr = sparse.coo_matrix(
+            (values, (arr[0], arr[1])), shape=shape
+        )
+        sparse_arr.setdiag(1)
+        return sparse_arr
+
+    def construct_graph_BP(self, Bs, Ps):
+        shape = (len(self.API_uid), len(self.API_uid))
+        B_mat = HINProcess._build_coo(Bs, shape).tocsr()
+        P_mat = HINProcess._build_coo(Ps, shape).tocsr()
+        return B_mat, P_mat
+
+    def save_matrices(self):
+        path = self.out_dir
+        np.save(os.path.join(path, 'A'), self.A_mat)
+        sparse.save_npz(os.path.join(path, 'B'), self.B_mat)
+        sparse.save_npz(os.path.join(path, 'P'), self.P_mat)
+
+    def run(self):
+        self.A_mat = self.construct_graph_A()
+        Bs, Ps = self.prep_graph_BP()
+        self.B_mat, self.P_mat = self.construct_graph_BP(Bs, Ps)
+        self.save_matrices()
 
 
 
-# class SmaliFeatures():
-    
-#     def __init__(self, apps_dir, out_dir, nproc):
-#         self.app_dirs = glob(os.path.join(apps_dir, '*/'))
-
-#         with Pool(nproc) as p:
-#             smali_apps = list(tqdm(p.imap_unordered(SmaliApp, self.app_dirs), total=len(self.app_dirs)))
-
-#         self.apps = {app.package: app for app in smali_apps}
-#         self.packages = list(self.apps.keys())
-#         for app in apps:
-#             app.info['package'] = a.package

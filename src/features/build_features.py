@@ -5,10 +5,10 @@ import pandas as pd
 import shutil
 # !pip install multiprocess
 from multiprocess import Pool
-from p_tqdm import p_map
+from p_tqdm import p_map, p_umap
 
 import src.utils as utils
-from src.features.smali import SmaliApp, SmaliHIN
+from src.features.smali import SmaliApp, HINProcess
 from src.features.app_features import FeatureBuilder
 
 # import numpy as np
@@ -22,45 +22,17 @@ def process_app(app_dir, out_dir):
     app = SmaliApp(app_dir)
     out_path = os.path.join(out_dir, app.package + '.csv')
     app.info.to_csv(out_path, index=None)
+    return app.package, out_path
 
 
 def extract_save(in_dir, out_dir, class_i, nproc):
     app_dirs = glob(os.path.join(in_dir, '*/'))
 
     print(f'Extracting features for {class_i}')
-    p_map(process_app, app_dirs, out_dir, num_cpus=nproc)
-    # with Pool(nproc) as p:
-    #     smali_apps = list(tqdm(
-    #         p.imap_unordered(SmaliApp, app_dirs), total=len(app_dirs)
-    #     ))
-
-    # print(f'Saving raw features for {class_i}')
-    # for app in tqdm(smali_apps):
-    #     out_path = os.path.join(out_dir, app.package + '.csv')
-    #     app.info.to_csv(out_path, index=None)
-
-
-# def aggregate_raw(interim_classes_dirs):
-#     labels = {}
-#     class_dfs = []
-#     for class_i, interim_dir in interim_classes_dirs.items():
-#         csv_ls = glob(os.path.join(interim_dir, '*.csv'))
-#         app_dfs = []
-
-#         print(f'Reading csv files for {class_i}')
-#         for csv in tqdm(csv_ls):
-#             app_df = pd.read_csv(csv)
-#             app_package = os.path.basename(csv)[:-4]
-#             labels[app_package] = class_i
-#             app_df['package'] = app_package
-#             app_dfs.append(app_df)
-
-#         class_i_df = pd.concat(app_dfs, ignore_index=True)
-#         class_i_df['class'] = class_i
-#         class_dfs.append(class_i_df)
-
-#     df = pd.concat(class_dfs, ignore_index=True)
-#     return df, labels
+    meta = p_umap(process_app, app_dirs, out_dir, num_cpus=nproc)
+    packages = [t[0]for t in meta]
+    csv_paths = [t[1]for t in meta]
+    return packages, csv_paths
 
 
 def build_features(**config):
@@ -68,20 +40,24 @@ def build_features(**config):
     # Set number of process, default to 2
     nproc = config['nproc'] if 'nproc' in config.keys() else 2
 
-    # for cls_i in utils.ITRM_CLASSES_DIRS.keys():
-    #     raw_dir = utils.RAW_CLASSES_DIRS[cls_i]
-    #     itrm_dir = utils.ITRM_CLASSES_DIRS[cls_i]
-    #     extract_save(raw_dir, itrm_dir, cls_i, nproc)
+    labels = {}
+    csvs = []
+    for cls_i in utils.ITRM_CLASSES_DIRS.keys():
+        raw_dir = utils.RAW_CLASSES_DIRS[cls_i]
+        itrm_dir = utils.ITRM_CLASSES_DIRS[cls_i]
+        packages, csv_paths = extract_save(raw_dir, itrm_dir, cls_i, nproc)
+        labels[cls_i] = packages
+        csvs += csv_paths
 
-    csvs = [
-        glob(os.path.join(itrm_path, '*.csv'))
-        for itrm_path in utils.ITRM_CLASSES_DIRS.values()
-    ]
-    csvs = [i for j in csvs for i in j]  # flatten
+    flatten = lambda ll: [i for j in ll for i in j]
+    meta = pd.DataFrame({
+        'label': flatten([[k] * len(v) for k, v in labels.items()])
+    }, index=flatten(labels.values()))
+    meta.to_csv(os.path.join(utils.PROC_DIR, 'meta.csv'))
 
-    hin = SmaliHIN(csvs)
-    hin.construct_graph_A()
-    hin.prepare_graph_BP()
+    print('Constructing matrices')
+    hin = HINProcess(csvs, utils.PROC_DIR, nproc=nproc)
+    hin.run()
 
 
     # # Build API-level features (interim)

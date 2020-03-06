@@ -4,6 +4,7 @@ from collections import defaultdict
 
 RAW_DIR = None
 ITRM_DIR = None
+PROC_DIR = None
 RAW_CLASSES_DIRS = None
 ITRM_CLASSES_DIRS = None
 
@@ -13,6 +14,7 @@ def prep_dir(**cfg):
 
     global RAW_DIR
     global ITRM_DIR
+    global PROC_DIR
     global RAW_CLASSES_DIRS
     global ITRM_CLASSES_DIRS
 
@@ -21,6 +23,7 @@ def prep_dir(**cfg):
 
     RAW_DIR = os.path.join(cfg['data_dir'], cfg['data_subdirs']['raw'])
     ITRM_DIR = os.path.join(cfg['data_dir'], cfg['data_subdirs']['interim'])
+    PROC_DIR = os.path.join(cfg['data_dir'], cfg['data_subdirs']['processed'])
     data_classes = cfg['data_classes']
 
     RAW_CLASSES_DIRS = {
@@ -32,7 +35,8 @@ def prep_dir(**cfg):
         for class_i in data_classes.keys()
     }
 
-    dir_ls = [RAW_DIR, ITRM_DIR] + list(RAW_CLASSES_DIRS.values()) + \
+    dir_ls = [RAW_DIR, ITRM_DIR, PROC_DIR] + \
+        list(RAW_CLASSES_DIRS.values()) + \
         list(ITRM_CLASSES_DIRS.values())
 
     for dir_i in dir_ls:
@@ -53,16 +57,31 @@ def clean_features(**cfg):
 
 
 class UniqueIdAssigner():
+    class MapGetter():
+        def __init__(self, mapping):
+            self.mapping = mapping
+
+        def __getitem__(self, key):
+            if type(self.mapping) == list:
+                return self.mapping[key]
+            if key not in self.mapping.keys():
+                raise KeyError(key)
+            return self.mapping[key]
+
     def __init__(self):
-        self.uid_lookup = defaultdict(lambda: len(self.uid_lookup))
-        self.value_by_id = lambda: list(self.uid_lookup.keys())
+        self.assigner = defaultdict(lambda: len(self.assigner))
+        self.value_by_id = []
+        self.id_of = self.MapGetter(self.assigner)
+        self.value_of = self.MapGetter(self.value_by_id)
 
     def add(self, *values):
-        uids = [self.uid_lookup[v] for v in values]
+        uids = [self.assigner[v] for v in values]
+        self.value_by_id.clear()
+        self.value_by_id.extend(self.assigner.keys())
         return uids
 
     def __getitem__(self, k):
         return self.value_by_id()[k]
 
     def __len__(self):
-        return len(self.uid_lookup)
+        return len(self.assigner)
