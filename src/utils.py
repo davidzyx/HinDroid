@@ -85,3 +85,15 @@ class UniqueIdAssigner():
 
     def __len__(self):
         return len(self.assigner)
+
+
+# From https://www.python.org/dev/peps/pep-0471/#examples
+def get_tree_size(path):
+    """Return total size of files in given path and subdirs."""
+    total = 0
+    for entry in os.scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            total += get_tree_size(entry.path)
+        else:
+            total += entry.stat(follow_symlinks=False).st_blocks * 512
+    return total

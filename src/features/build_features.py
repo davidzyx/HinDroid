@@ -1,10 +1,11 @@
 import os
+import sys
 from glob import glob
 from tqdm import tqdm
 import pandas as pd
 import shutil
 # !pip install multiprocess
-from multiprocess import Pool
+from pathos.multiprocessing import ProcessPool
 from p_tqdm import p_map, p_umap
 
 import src.utils as utils
@@ -18,18 +19,28 @@ from src.features.app_features import FeatureBuilder
 # from sklearn.metrics import confusion_matrix, f1_score
 
 
+def is_large_dir(app_dir, size_in_bytes=1e8):
+    if utils.get_tree_size(app_dir) > size_in_bytes:
+        return False
+    return True
+
+
 def process_app(app_dir, out_dir):
     app = SmaliApp(app_dir)
     out_path = os.path.join(out_dir, app.package + '.csv')
     app.info.to_csv(out_path, index=None)
-    return app.package, out_path
+    package = app.package
+    del app
+    return package, out_path
 
 
 def extract_save(in_dir, out_dir, class_i, nproc):
     app_dirs = glob(os.path.join(in_dir, '*/'))
+    app_dirs = filter(is_large_dir, app_dirs)
 
     print(f'Extracting features for {class_i}')
-    meta = p_umap(process_app, app_dirs, out_dir, num_cpus=nproc)
+
+    meta = p_umap(process_app, app_dirs, out_dir, num_cpus=nproc, file=sys.stdout)
     packages = [t[0]for t in meta]
     csv_paths = [t[1]for t in meta]
     return packages, csv_paths

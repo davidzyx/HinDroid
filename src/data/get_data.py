@@ -140,6 +140,9 @@ def stage_smali(cls_i_cfg, out_dir, nproc):
             raise NotImplementedError
     else:
         raise NotImplementedError
+
+    links = [os.path.join(out_dir, os.path.basename(os.path.dirname(src))) for src in smali_dirs]
+    [os.symlink(src, link) for src, link in zip(smali_dirs, links)]
     return smali_dirs
 
 
@@ -171,4 +174,5 @@ def get_data(**config):
     # Set number of process, default to 2
     nproc = config['nproc'] if 'nproc' in config.keys() else 2
 
-    print(run_pipeline(config['data_classes'], nproc))
+    classes = run_pipeline(config['data_classes'], nproc)
+    print({k: len(v) for k, v in classes.items()})
