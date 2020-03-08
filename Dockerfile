@@ -36,4 +36,3 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt  && \
 	fix-permissions $CONDA_DIR
 
 COPY --from=datahub /run_jupyter.sh /
-USER $NB_UID:$NB_GID
