@@ -11,9 +11,6 @@ from collections import defaultdict
 from p_tqdm import p_map, p_umap
 from scipy import sparse
 
-# !conda install -c conda-forge tqdm -y
-from tqdm import tqdm
-
 from src.utils import UniqueIdAssigner
 
 
@@ -93,6 +90,7 @@ class HINProcess():
         self.out_dir = out_dir
         self.nproc = nproc
         self.packages = [os.path.basename(csv)[:-4] for csv in csvs]
+        print('Processing CSVs')
         self.infos = p_map(HINProcess.csv_proc, csvs, num_cpus=nproc)
         self.prep_ids()
 
@@ -122,6 +120,7 @@ class HINProcess():
             A_cols.append(bag_of_API)
 
         A_mat = np.array(A_cols).T  # shape: (# of apps, # of unique APIs)
+        A_mat = sparse.csr_matrix(A_mat)
         return A_mat
 
     def _prep_graph_B(info):
@@ -143,6 +142,7 @@ class HINProcess():
         return edges
 
     def _save_interim_BP(Bs, Ps, csvs, nproc):
+        print('Saving B and P')
         p_umap(
             lambda arr, file: np.save(file, arr),
             Bs + Ps,
@@ -151,7 +151,9 @@ class HINProcess():
         )
 
     def prep_graph_BP(self, out=True):
+        print('Processing B')
         Bs = p_map(HINProcess._prep_graph_B, self.infos, num_cpus=self.nproc)
+        print('Processing P')
         Ps = p_map(HINProcess._prep_graph_P, self.infos, num_cpus=self.nproc)
         if out:
             HINProcess._save_interim_BP(Bs, Ps, self.csvs, self.nproc)
@@ -175,15 +177,20 @@ class HINProcess():
 
     def save_matrices(self):
         path = self.out_dir
-        np.save(os.path.join(path, 'A'), self.A_mat)
+        sparse.save_npz(os.path.join(path, 'A'), self.A_mat)
         sparse.save_npz(os.path.join(path, 'B'), self.B_mat)
         sparse.save_npz(os.path.join(path, 'P'), self.P_mat)
+
+    def save_info(self):
+        path = self.out_dir
+        s_API = pd.Series(self.API_uid.value_by_id, name='api')
+        s_APP = pd.Series(self.APP_uid.value_by_id, name='app')
+        s_API.to_csv(os.path.join(path, 'APIs.csv'))
+        s_APP.to_csv(os.path.join(path, 'APPs.csv'))
 
     def run(self):
         self.A_mat = self.construct_graph_A()
         Bs, Ps = self.prep_graph_BP()
         self.B_mat, self.P_mat = self.construct_graph_BP(Bs, Ps)
         self.save_matrices()
-
-
-
+        self.save_info()

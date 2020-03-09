@@ -21,26 +21,33 @@ from src.features.app_features import FeatureBuilder
 
 def is_large_dir(app_dir, size_in_bytes=1e8):
     if utils.get_tree_size(app_dir) > size_in_bytes:
-        return False
-    return True
+        return True
+    return False
 
 
 def process_app(app_dir, out_dir):
-    app = SmaliApp(app_dir)
-    out_path = os.path.join(out_dir, app.package + '.csv')
-    app.info.to_csv(out_path, index=None)
-    package = app.package
-    del app
+    if is_large_dir(app_dir):
+        print(f'Error {out_dir} too big')
+        return None
+    try:
+        app = SmaliApp(app_dir)
+        out_path = os.path.join(out_dir, app.package + '.csv')
+        app.info.to_csv(out_path, index=None)
+        package = app.package
+        del app
+    except:
+        print(f'Error extracting {app_dir}')
+        return None
     return package, out_path
 
 
 def extract_save(in_dir, out_dir, class_i, nproc):
     app_dirs = glob(os.path.join(in_dir, '*/'))
-    app_dirs = filter(is_large_dir, app_dirs)
 
     print(f'Extracting features for {class_i}')
 
     meta = p_umap(process_app, app_dirs, out_dir, num_cpus=nproc, file=sys.stdout)
+    meta = [i for i in meta if i is not None]
     packages = [t[0]for t in meta]
     csv_paths = [t[1]for t in meta]
     return packages, csv_paths
@@ -66,7 +73,6 @@ def build_features(**config):
     }, index=flatten(labels.values()))
     meta.to_csv(os.path.join(utils.PROC_DIR, 'meta.csv'))
 
-    print('Constructing matrices')
     hin = HINProcess(csvs, utils.PROC_DIR, nproc=nproc)
     hin.run()
 
