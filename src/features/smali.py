@@ -4,8 +4,9 @@ import numpy as np
 from glob import glob
 import networkx as nx
 import matplotlib.pyplot as plt
-# from functools import reduce
 import os
+from tqdm import tqdm
+import sys
 from itertools import combinations
 from collections import defaultdict
 from p_tqdm import p_map, p_umap
@@ -29,9 +30,9 @@ class SmaliApp():
             os.path.join(app_dir, 'smali*/**/*.smali'), recursive=True
         ))
         if len(self.smali_fn_ls) == 0:
-            print('Skipping invalid app directory:', self.app_dir)
+            print('Skipping invalid app dir:', self.app_dir, file=sys.stdout)
             return
-            raise Exception('Invalid app directory', app_dir)
+            raise Exception('Invalid app dir:', app_dir)
 
         self.info = self.extract_info()
 
@@ -95,8 +96,9 @@ class HINProcess():
         self.prep_ids()
 
     def prep_ids(self):
+        print('Processing APIs', file=sys.stdout, file=sys.stdout)
         self.API_uid = UniqueIdAssigner()
-        for info in self.infos:
+        for info in tqdm(self.infos):
             info['api_id'] = self.API_uid.add(*info.api)
 
         self.APP_uid = UniqueIdAssigner()
@@ -142,7 +144,7 @@ class HINProcess():
         return edges
 
     def _save_interim_BP(Bs, Ps, csvs, nproc):
-        print('Saving B and P')
+        print('Saving B and P', file=sys.stdout)
         p_umap(
             lambda arr, file: np.save(file, arr),
             Bs + Ps,
@@ -151,9 +153,9 @@ class HINProcess():
         )
 
     def prep_graph_BP(self, out=True):
-        print('Processing B')
+        print('Processing B', file=sys.stdout)
         Bs = p_map(HINProcess._prep_graph_B, self.infos, num_cpus=self.nproc)
-        print('Processing P')
+        print('Processing P', file=sys.stdout)
         Ps = p_map(HINProcess._prep_graph_P, self.infos, num_cpus=self.nproc)
         if out:
             HINProcess._save_interim_BP(Bs, Ps, self.csvs, self.nproc)

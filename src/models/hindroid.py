@@ -78,8 +78,9 @@ def run(**config):
     ]
 
     meta_fp = os.path.join(PROC_DIR, 'meta.csv')
-    df = pd.read_csv(meta_fp, index_col=0)
-    labels = (df.label == 'class1').astype(int).values
+    meta = pd.read_csv(meta_fp, index_col=0)
+    print(meta.label.value_counts())
+    labels = (meta.label == 'class1').astype(int).values
 
     metapaths = ['AA', 'APA', 'ABA', 'APBPA']
     out_csv = os.path.join(PROC_DIR, 'results.csv')

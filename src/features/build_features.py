@@ -27,7 +27,7 @@ def is_large_dir(app_dir, size_in_bytes=1e8):
 
 def process_app(app_dir, out_dir):
     if is_large_dir(app_dir):
-        print(f'Error {out_dir} too big')
+        print(f'Error {app_dir} too big')
         return None
     try:
         app = SmaliApp(app_dir)
