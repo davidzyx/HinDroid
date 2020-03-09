@@ -48,11 +48,10 @@ class HinDroid():
             accs.append(self.svms[i].score(gram_train, y))
         return accs
 
-    def test(self, X, y):
+    def test(self, X_test, X_train, y):
         accs = []
         for i in tqdm(range(len(self.kernels))):
-            gram_test = self.kernels[i](X, X)
-            self.svms[i].fit(gram_test, y)
+            gram_test = self.kernels[i](X_test, X_train)
             accs.append(self.svms[i].score(gram_test, y))
         return accs
 
@@ -62,7 +61,7 @@ class HinDroid():
             train_test_split(X, y, test_size=test_size)
 
         training_accs = self.train(X_train, y_train)
-        testing_accs = self.test(X_test, y_test)
+        testing_accs = self.test(X_test, X_train, y_test)
 
         return pd.DataFrame({
             'kernels': self.metapaths,
