@@ -162,6 +162,7 @@ class HINProcess():
     def _build_coo(arr_ls, shape):
         arr = np.hstack(arr_ls)
         arr = np.hstack([arr, arr[::-1, :]])
+        arr = np.unique(arr, axis=1)  # drop dupl pairs
         values = np.full(shape=arr.shape[1], fill_value=1, dtype='i1')
         sparse_arr = sparse.coo_matrix(
             (values, (arr[0], arr[1])), shape=shape
@@ -171,8 +172,8 @@ class HINProcess():
 
     def construct_graph_BP(self, Bs, Ps):
         shape = (len(self.API_uid), len(self.API_uid))
-        B_mat = HINProcess._build_coo(Bs, shape).tocsr()
-        P_mat = HINProcess._build_coo(Ps, shape).tocsr()
+        B_mat = HINProcess._build_coo(Bs, shape).tocsc()
+        P_mat = HINProcess._build_coo(Ps, shape).tocsc()
         return B_mat, P_mat
 
     def save_matrices(self):

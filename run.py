@@ -5,6 +5,7 @@ import src.utils as utils
 from src.utils import prep_dir, clean_raw, clean_features
 from src.data.get_data import get_data
 from src.features.build_features import build_features
+from src.models import hindroid
 
 DATA_PARAMS = 'config/data-params.json'
 TEST_PARAMS = 'config/test-params.json'
@@ -41,6 +42,8 @@ def main(targets):
     if 'process' in targets:
         build_features(**cfg)
 
+    if 'model' in targets:
+        hindroid.run(**cfg)
 
     return
 
