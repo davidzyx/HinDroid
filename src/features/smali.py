@@ -96,7 +96,7 @@ class HINProcess():
         self.prep_ids()
 
     def prep_ids(self):
-        print('Processing APIs', file=sys.stdout, file=sys.stdout)
+        print('Processing APIs', file=sys.stdout)
         self.API_uid = UniqueIdAssigner()
         for info in tqdm(self.infos):
             info['api_id'] = self.API_uid.add(*info.api)
@@ -179,12 +179,14 @@ class HINProcess():
         return B_mat, P_mat
 
     def save_matrices(self):
+        print('Saving matrices', file=sys.stdout)
         path = self.out_dir
         sparse.save_npz(os.path.join(path, 'A'), self.A_mat)
         sparse.save_npz(os.path.join(path, 'B'), self.B_mat)
         sparse.save_npz(os.path.join(path, 'P'), self.P_mat)
 
     def save_info(self):
+        print('Saving infos', file=sys.stdout)
         path = self.out_dir
         s_API = pd.Series(self.API_uid.value_by_id, name='api')
         s_APP = pd.Series(self.APP_uid.value_by_id, name='app')

@@ -85,4 +85,6 @@ def run(**config):
     metapaths = ['AA', 'APA', 'ABA', 'APBPA']
     out_csv = os.path.join(PROC_DIR, 'results.csv')
     hin = HinDroid(B_mat, P_mat, metapaths)
-    hin.evaluate(A_mat, labels).to_csv(out_csv, index=None)
+    results = hin.evaluate(A_mat, labels)
+    print(results)
+    results.to_csv(out_csv, index=None)

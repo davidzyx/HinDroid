@@ -56,6 +56,12 @@ def clean_features(**cfg):
     shutil.rmtree(itrm_dir, ignore_errors=True)
 
 
+def clean_processed(**cfg):
+    data_dir = cfg['data_dir']
+    itrm_dir = os.path.join(data_dir, cfg['data_subdirs']['processed'])
+    shutil.rmtree(itrm_dir, ignore_errors=True)
+
+
 class UniqueIdAssigner():
     class MapGetter():
         def __init__(self, mapping):
@@ -95,5 +101,5 @@ def get_tree_size(path):
         if entry.is_dir(follow_symlinks=False):
             total += get_tree_size(entry.path)
         else:
-            total += entry.stat(follow_symlinks=False).st_blocks * 512
+            total += entry.stat(follow_symlinks=False).st_size
     return total
