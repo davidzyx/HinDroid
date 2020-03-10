@@ -1,12 +1,9 @@
-import urllib
 import requests
 import os
 import subprocess
 import shutil
 from glob import glob
-import sys
 from pathos.threading import ThreadPool
-from pathos.multiprocessing import ProcessPool
 from pathos.util import print_exc_info
 
 # !pip install beautifulsoup4

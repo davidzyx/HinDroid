@@ -12,7 +12,7 @@ from multiprocess import Pool
 
 def xml_tree(url):
     """Parse a xml url request to a ElementTree root
-    
+
     :param url: url string of the xml link, could be gzipped
     :returns: root -- root of the ElementTree
     """
@@ -32,6 +32,7 @@ def xml_tree(url):
     root = ET.parse(fp).getroot()
     return root
 
+
 def parse_main_xml(xml_url):
     """Parse the sitemap url from apkpure.com to get of list of apps
 
@@ -45,6 +46,7 @@ def parse_main_xml(xml_url):
         if not ('default' in u or 'topics' in u or 'tag' in u or 'group' in u)
     ])
     return urls
+
 
 def extract_apps(sitemap_url):
     """Extract a single sitemap.xml.gz and return a dataframe of apps
@@ -64,7 +66,7 @@ def extract_apps(sitemap_url):
     apps = list(sitemap_root)
     apps = [app for app in apps if 'image' in app[4].tag]
     sitemap_category = re.search('\w+', sitemap_url.split('/')[-1]).group(0)
-    
+
     df = pd.DataFrame({
         'url': [a[0].text for a in apps],
         'lastmod': [a[1].text for a in apps],
@@ -72,12 +74,13 @@ def extract_apps(sitemap_url):
     })
     df.lastmod = pd.to_datetime(df.lastmod)
     df['category'] = sitemap_category
-    
+
     return df
+
 
 def clean_and_process(metadata):
     """Clean inconsistencies and reduce complexity
-    
+
     :param metadata: dataframe after aggregation
     :returns: metadata -- same dataframe reference
     """
@@ -97,6 +100,7 @@ def clean_and_process(metadata):
     metadata = metadata.reset_index(drop=True)
     metadata = metadata[['package', 'name', 'category', 'name_slug', 'lastmod']]
     return metadata
+
 
 def run(data_fp, nproc):
     """Runs the first step of the data pipeline
@@ -118,6 +122,7 @@ def run(data_fp, nproc):
 
     print(f'Saving to {data_fp} ...')
     metadata.to_parquet(data_fp, engine='pyarrow')
+
 
 def load_data(data_dir, nproc, data_fp=None):
     """Check if parquet data exists. If not, proceed to download"""

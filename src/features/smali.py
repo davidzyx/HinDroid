@@ -2,13 +2,10 @@ import re
 import pandas as pd
 import numpy as np
 from glob import glob
-import networkx as nx
-import matplotlib.pyplot as plt
 import os
 from tqdm import tqdm
 import sys
 from itertools import combinations
-from collections import defaultdict
 from p_tqdm import p_map, p_umap
 from scipy import sparse
 

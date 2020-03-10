@@ -1,7 +1,6 @@
 import sys
 import json
 
-import src.utils as utils
 from src.utils import prep_dir, clean_raw, clean_features, clean_processed
 from src.data.get_data import get_data
 from src.features.build_features import build_features
@@ -26,6 +25,10 @@ def main(targets):
         cfg = load_params(TEST_PARAMS)
     elif 'test-project' in targets:
         cfg = load_params(TEST_PARAMS)
+        prep_dir(**cfg)
+        clean_raw(**cfg)
+        clean_features(**cfg)
+        clean_processed(**cfg)
         prep_dir(**cfg)
         get_data(**cfg)
         build_features(**cfg)
