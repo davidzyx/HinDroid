@@ -115,7 +115,10 @@ class HINProcess():
 
         A_cols = []
         for unique in unique_APIs_all:
-            bag_of_API = [1 if unique in app_set else 0 for app_set in unique_APIs_app]
+            bag_of_API = [
+                1 if unique in app_set else 0
+                for app_set in unique_APIs_app
+            ]
             A_cols.append(bag_of_API)
 
         A_mat = np.array(A_cols).T  # shape: (# of apps, # of unique APIs)
@@ -150,16 +153,16 @@ class HINProcess():
         )
 
     def prep_graph_BP(self, out=True):
-        print('Processing B', file=sys.stdout)
+        print('Preparing B', file=sys.stdout)
         Bs = p_map(HINProcess._prep_graph_B, self.infos, num_cpus=self.nproc)
-        print('Processing P', file=sys.stdout)
+        print('Preparing P', file=sys.stdout)
         Ps = p_map(HINProcess._prep_graph_P, self.infos, num_cpus=self.nproc)
         if out:
             HINProcess._save_interim_BP(Bs, Ps, self.csvs, self.nproc)
         return Bs, Ps
 
     def _build_coo(arr_ls, shape):
-        arr = np.hstack(arr_ls)
+        arr = np.hstack([a for a in arr_ls if a.shape[0] == 2])
         arr = np.hstack([arr, arr[::-1, :]])
         arr = np.unique(arr, axis=1)  # drop dupl pairs
         values = np.full(shape=arr.shape[1], fill_value=1, dtype='i1')
@@ -171,7 +174,9 @@ class HINProcess():
 
     def construct_graph_BP(self, Bs, Ps):
         shape = (len(self.API_uid), len(self.API_uid))
+        print('Constructing B', file=sys.stdout)
         B_mat = HINProcess._build_coo(Bs, shape).tocsc()
+        print('Constructing P', file=sys.stdout)
         P_mat = HINProcess._build_coo(Ps, shape).tocsc()
         return B_mat, P_mat
 
