@@ -4,6 +4,7 @@ from scipy import sparse
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from tqdm import tqdm
 
 import src.utils as utils
@@ -39,34 +40,36 @@ class HinDroid():
             kernels.append(self._kernel_func(mp))
         return kernels
 
-    def train(self, X, y):
-        accs = []
-        for i in tqdm(range(len(self.kernels))):
-            gram_train = self.kernels[i](X, X)
-            self.svms[i].fit(gram_train, y)
-            accs.append(self.svms[i].score(gram_train, y))
-        return accs
+    def _evaluate(self, X_train, X_test, y_train, y_test):
+        results = []
+        for kernel, svm in tqdm(zip(self.kernels, self.svms)):
+            gram_train = kernel(X_train, X_train)
+            svm.fit(gram_train, y_train)
+            train_acc = svm.score(gram_train, y_train)
 
-    def test(self, X_test, X_train, y):
-        accs = []
-        for i in tqdm(range(len(self.kernels))):
-            gram_test = self.kernels[i](X_test, X_train)
-            accs.append(self.svms[i].score(gram_test, y))
-        return accs
+            gram_test = kernel(X_test, X_train)
+            y_pred = svm.predict(gram_test)
+            test_acc = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred)
+            tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+
+            results.append(pd.Series({
+                'train_acc': train_acc, 'test_acc': test_acc, 'f1': f1,
+                'TP': tp, 'FP': fp, 'TN': tn, 'FN': fn
+            }))
+
+        return results
 
     def evaluate(self, X, y, test_size=0.33):
-        X = sparse.csr_matrix(X, dtype='uint64')
+        X = sparse.csr_matrix(X, dtype='uint32')
         X_train, X_test, y_train, y_test = \
             train_test_split(X, y, test_size=test_size)
 
-        training_accs = self.train(X_train, y_train)
-        testing_accs = self.test(X_test, X_train, y_test)
-
-        return pd.DataFrame({
-            'kernels': self.metapaths,
-            'train_acc': training_accs,
-            'test_acc': testing_accs
-        })
+        results = self._evaluate(X_train, X_test, y_train, y_test)
+        results = [res.rename(mp) for res, mp in zip(results, self.metapaths)]
+        results = pd.DataFrame(results)
+        results.index.name = 'metapath'
+        return results
 
 
 def run(**config):
