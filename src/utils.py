@@ -87,7 +87,7 @@ class UniqueIdAssigner():
         return uids
 
     def __getitem__(self, k):
-        return self.value_by_id()[k]
+        return self.value_by_id[k]
 
     def __len__(self):
         return len(self.assigner)

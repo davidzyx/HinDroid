@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 from scipy import sparse
 import os
+import sys
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from tqdm import tqdm
 
 import src.utils as utils
 
@@ -42,7 +42,8 @@ class HinDroid():
 
     def _evaluate(self, X_train, X_test, y_train, y_test):
         results = []
-        for kernel, svm in tqdm(zip(self.kernels, self.svms)):
+        for mp, kernel, svm in zip(self.metapaths, self.kernels, self.svms):
+            print(f'Evaluating {mp}...', end='', file=sys.stderr, flush=True)
             gram_train = kernel(X_train, X_train)
             svm.fit(gram_train, y_train)
             train_acc = svm.score(gram_train, y_train)
@@ -57,6 +58,7 @@ class HinDroid():
                 'train_acc': train_acc, 'test_acc': test_acc, 'f1': f1,
                 'TP': tp, 'FP': fp, 'TN': tn, 'FN': fn
             }))
+            print('done', file=sys.stderr)
 
         return results
 
@@ -85,8 +87,16 @@ def run(**config):
     labels = (meta.label == 'class1').astype(int).values
 
     metapaths = ['AA', 'APA', 'ABA', 'APBPA']
-    out_csv = os.path.join(PROC_DIR, 'results.csv')
     hin = HinDroid(B_mat, P_mat, metapaths)
     results = hin.evaluate(A_mat, labels)
     print(results)
-    results.to_csv(out_csv, index=None)
+    out_csv = os.path.join(PROC_DIR, 'results.csv')
+    results.to_csv(out_csv)
+
+    # runs = []
+    # for i in range(10):
+    #     results = hin.evaluate(A_mat, labels)
+    #     print(results)
+    #     runs.append(results)
+    #     out_csv = os.path.join(PROC_DIR, f'results_{i}.csv')
+    #     results.to_csv(out_csv)
