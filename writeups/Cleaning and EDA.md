@@ -2,7 +2,7 @@
 
 ### Graph definitions
 
-The HinDroid paper extracts information in smali code to construct a Heterogeneous Information Network with a graph representation. The graph consists of two types of node and four types of edges. Every node inside the HIN are representations of either an App or an API, which is defined in XXX. Every app node is only directly connected to API nodes and must not directly to other App nodes. This type of edge is denoting that the connected APIs can be found inside the App's smali code. Every other type of edges are edges between only APIs. These edges are features inside the smali code. Edge type B connects every pair of APIs that are co-appeared inside the same code block in every app. Edge type P connects every pair of APIs that are from the same library (package) inside every app. Edge type I connects every pair of APIs that are using the same invoke method for present in every app. The entire HIN graph is generated for every passthrough of the prediction task. Later we will deconstruct the graph to four adjacency matrices which correspond to the four types of edges.
+The HinDroid paper extracts information in smali code to construct a Heterogeneous Information Network with a graph representation. The graph consists of two types of node and four types of edges. Every node inside the HIN represent either an App or an API. Every app node is only directly connected to API nodes and must not directly to other App nodes. This type of edge is denoting that the connected APIs can be found inside the App's smali code. Every other type of edges are edges between only APIs. These edges are features inside the smali code. Edge type B connects every pair of APIs that are co-appeared inside the same code block in every app. Edge type P connects every pair of APIs that are from the same library (package) inside every app. Edge type I connects every pair of APIs that are using the same invoke method for present in every app. The entire HIN graph is generated for every passthrough of the prediction task. Later we will deconstruct the graph to four adjacency matrices which correspond to the four types of edges.
 
 ### Compute intensive jobs
 
@@ -19,7 +19,7 @@ The columns of the dataframes are:
  3   invocation     The invoke method of the API call
  4   library        The library (package) the call is from
  5   method_name    The method name of the API
- 6   package        The apk package name where the file is from
+ 6   package        The APK package name where the file is from
  7   class          Class label specified in config
  ```
 
